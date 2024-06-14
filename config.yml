@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  registry:
+    image: arrowhead/agile.ro:registry
+    ports:
+      - "8443:8443"
+
+  orchestrator:
+    image: arrowhead/agile.ro:orchestrator
+    ports:
+      - "8441:8441"
+
+  auth:
+    image: arrowhead/agile.ro:auth
+    ports:
+      - "8445:8445"

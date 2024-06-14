@@ -1,0 +1,13 @@
+
+FROM mcr.microsoft.com/mssql/server:2014-latest
+
+ENV SA_PASSWORD=YourStrong!Passw0rd
+ENV ACCEPT_EULA=Y
+
+RUN mkdir -p /usr/src/app
+
+COPY init-db.sql /usr/src/app
+
+EXPOSE 1433
+
+#CMD /bin/bash -c '/opt/mssql/bin/sqlservr & sleep 30s && /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -i /usr/src/app/init-db.sql && tail -f /dev/null'
