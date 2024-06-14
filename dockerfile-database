@@ -1,7 +1,7 @@
 
 FROM mcr.microsoft.com/mssql/server:2014-latest
 
-ENV SA_PASSWORD=YourStrong!Passw0rd
+ENV SA_PASSWORD=pass
 ENV ACCEPT_EULA=Y
 
 RUN mkdir -p /usr/src/app
