@@ -1,39 +1,31 @@
-pragma solidity ^0.8.19;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-contract PacketData {
-    struct Packet {
-        address source;
-        address destination;
-        bytes32 data;
-        uint timestamp;
-        uint size;
-        bool isProcessed;
+contract TemperatureHumidityRegistry {
+    struct SensorData {
+        uint256 timestamp;
+        string deviceId;
+        uint256 temperature;
+        uint256 humidity;
     }
 
-    mapping (address => Packet[]) public packets;
+    event DataRecorded(address indexed from, string deviceId, uint256 temperature, uint256 humidity);
 
-    function addPacket(address _address, address _to, bytes32 _data, uint _timestamp, uint _size) public {
-        packets[_to].push(Packet(_address, _to, _data, _timestamp, _size, false));
+    mapping(string => SensorData[]) private sensorDataMap;
+
+    function recordData(string memory deviceId, uint256 temperature, uint256 humidity) public {
+        SensorData memory newEntry = SensorData(block.timestamp, deviceId, temperature, humidity);
+        sensorDataMap[deviceId].push(newEntry);
+        emit DataRecorded(msg.sender, deviceId, temperature, humidity);
     }
-    
-    function getPackets(address _address) public returns (bytes32[] memory, uint[] memory, uint[] memory) {
-        Packet[] storage packetArray = packets[_address];
 
-        uint i;
-        uint arrayLength = packetArray.length;
-        uint[] memory timestampArray = new uint[](arrayLength);
-        uint[] memory sizeArray = new uint[](arrayLength);
-        bytes32[] memory dataArray = new bytes32[](arrayLength);
-
-        for (i = 0; i < arrayLength; i++) {
-            Packet storage packet = packetArray[i];
-            if(!packet.isProcessed) {
-                packet.isProcessed = true;
-                dataArray[i] = packet.data;
-                timestampArray[i] = packet.timestamp;
-                sizeArray[i] = packet.size;
-            }
+    function getLastData(string memory deviceId) public view returns (uint256 timestamp, uint256 temperature, uint256 humidity) {
+        uint256 length = sensorDataMap[deviceId].length;
+        if (length > 0) {
+            SensorData memory lastEntry = sensorDataMap[deviceId][length - 1];
+            return (lastEntry.timestamp, lastEntry.temperature, lastEntry.humidity);
+        } else {
+            return (0, 0, 0);
         }
-        return (dataArray, timestampArray, sizeArray);
     }
 }
