@@ -15,3 +15,23 @@ services:
     image: arrowhead/agile.ro:auth
     ports:
       - "8445:8445"
+
+  mqtt_broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  nodered:
+    image: nodered/node-red:latest
+    ports:
+      - "1880:1880"
+
+  database:
+    #there i want to use google sheets as database, but I put for the moment mysql
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+
