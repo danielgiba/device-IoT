@@ -27,11 +27,14 @@ services:
     ports:
       - "1880:1880"
 
-  database:
-    #there i want to use google sheets as database, but I put for the moment mysql
-    image: mysql:latest
+  influxdb:
+    image: influxdb:latest
     ports:
-      - "3306:3306"
+      - "8086:8086"
     environment:
-      MYSQL_ROOT_PASSWORD: example
-
+      - INFLUXDB_DB=tempAndHum
+      - INFLUXDB_ADMIN_ENABLED=true
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=Practica123*
+      - INFLUXDB_USER=user
+      - INFLUXDB_USER_PASSWORD=pass
