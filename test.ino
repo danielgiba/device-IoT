@@ -29,93 +29,103 @@ void loop() {
 
 
 /*
-#include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
+#include <InfluxDbClient.h>
+#include <InfluxDbCloud.h>
+
+#define WIFI_SSID "WIFIname"
+#define WIFI_PASSWORD "WIFIpass"
+
+#define INFLUXDB_URL "https://eu-central-1-1.aws.cloud2.influxdata.com"
+#define INFLUXDB_TOKEN "DQiOAwRxA4mM2DZRc6OHhWGQDH17jEpdrXvRtcbPjwgrUnwU86eLxvnIQCsSAYJy811dQgiMcKU_w9coMHaVew=="
+#define INFLUXDB_ORG "e43d6a61fffd1b09"
+#define INFLUXDB_BUCKET "BUCKET"
+
+#define TZ_INFO "UTC3"
 
 #define DHTPIN 2
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-#define ESP8266_RX 10
-#define ESP8266_TX 11
-SoftwareSerial espSerial(ESP8266_RX, ESP8266_TX);
-
-const char* ssid = "WIFIname";
-const char* password = "WIFIpass";
 const char* mqtt_server = "mqtt.beia-telemetrie.ro";
 const char* mqtt_topic = "/training/device/George-Daniel-Giba/";
 
 WiFiClient espClient;
-PubSubClient client(espClient);
+PubSubClient mqttClient(espClient);
+
+InfluxDBClient influxClient(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
+
+Point sensor("sensor_data");
 
 void setup() {
   Serial.begin(115200);
-  espSerial.begin(115200);
-
   dht.begin();
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-}
-
-void setup_wifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(100);
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+  mqttClient.setServer(mqtt_server, 1883);
+  reconnectMQTT();
+
+  timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
+
+  if (influxClient.validateConnection()) {
+    Serial.println(influxClient.getServerUrl());
+  } else {
+    Serial.println(influxClient.getLastErrorMessage());
+  }
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.print("Connecting to MQTT server...");
-    if (client.connect("ArduinoClient")) {
-      Serial.println("connected");
+void loop() {
+  if (!mqttClient.connected()) {
+    reconnectMQTT();
+  }
+  mqttClient.loop();
+
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  if (isnan(temperature) || isnan(humidity)) {
+    return;
+  }
+
+  sendToMQTT(temperature, humidity);
+  sendToInfluxDB(temperature, humidity);
+
+  delay(60000);
+}
+
+void reconnectMQTT() {
+  while (!mqttClient.connected()) {
+    if (mqttClient.connect("ESP8266Client")) {
+      mqttClient.subscribe(mqtt_topic);
     } else {
-      Serial.print("Failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" Trying again in 5 seconds");
       delay(5000);
     }
   }
 }
 
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
+void sendToMQTT(float temperature, float humidity) {
+  String payload = String("{\"temperature\":") + temperature + ",\"humidity\":" + humidity + "}";
+  mqttClient.publish(mqtt_topic, payload.c_str());
+}
 
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
+void sendToInfluxDB(float temperature, float humidity) {
+  sensor.clearFields();
+  sensor.addField("temperature", temperature);
+  sensor.addField("humidity", humidity);
 
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Error reading DHT11!");
+  if (WiFi.status() != WL_CONNECTED) {
     return;
   }
 
-  Serial.print("Temperature: ");
-  Serial.print(t);
-  Serial.print(" °C, Humidity: ");
-  Serial.print(h);
-  Serial.println(" %");
-
-  String payload = "Temperature: " + String(t) + " C, Humidity: " + String(h) + " %";
-  Serial.print("Sending message: ");
-  Serial.println(payload);
-  client.publish(mqtt_topic, payload.c_str());
-
-  delay(60000);
+  if (!influxClient.writePoint(sensor)) {
+    Serial.println(influxClient.getLastErrorMessage());
+  }
 }
+
 */
